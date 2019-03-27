@@ -3,8 +3,6 @@ import argparse
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
-from torchvision import datasets, transforms
 
 
 class RankNet(nn.Module):
@@ -14,7 +12,8 @@ class RankNet(nn.Module):
 
     def forward(self, x):
         return x
-    
+
+
 class MatchPyramidNet(RankNet):
     def __init__(self, config):
         super(MatchPyramidNet, self).__init__(config)
@@ -34,6 +33,7 @@ class MatchPyramidNet(RankNet):
         x = F.relu(self.fc1(x))
         x = self.fc2(x)
         return F.log_softmax(x, dim=1)
+
 
 class DeepRankNet(RankNet):
     def __init__(self):

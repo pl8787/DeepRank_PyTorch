@@ -6,35 +6,43 @@ This module is used to read data from letor dataset.
 __version__ = '0.2'
 __author__ = 'Liang Pang'
 
-import sys
-import random
 import json
+import random
+import sys
 
 import numpy as np
 
 import utils
+
 
 class DataLoader():
 
     def __init__(self, config_file):
         self.config_file = config_file
         self.config = json.loads( open(config_file).read() )
-        
+
         self.Letor07Path = self.config['data_dir'] #'/home/pangliang/matching/data/letor/r5w/'
 
-        self.word_dict, self.iword_dict = utils.read_word_dict(filename=self.Letor07Path + '/word_dict.txt')
-        self.query_data = utils.read_data(filename=self.Letor07Path + '/qid_query.txt')
-        self.doc_data = utils.read_data(filename=self.Letor07Path + '/docid_doc.txt')
-        self.embed_dict = utils.read_embedding(filename=self.Letor07Path + '/embed_wiki-pdc_d50_norm')
-        
+        self.word_dict, self.iword_dict = utils.read_word_dict(
+            filename=self.Letor07Path + '/word_dict.txt')
+        self.query_data = utils.read_data(
+            filename=self.Letor07Path + '/qid_query.txt')
+        self.doc_data = utils.read_data(
+            filename=self.Letor07Path + '/docid_doc.txt')
+        self.embed_dict = utils.read_embedding(
+            filename=self.Letor07Path + '/embed_wiki-pdc_d50_norm')
+
         self.feat_size = self.config['feat_size']
-        
+
         self._PAD_ = len(self.word_dict)
         self.embed_dict[self._PAD_] = np.zeros((50, ), dtype=np.float32)
         self.word_dict[self._PAD_] = '[PAD]'
         self.iword_dict['[PAD]'] = self._PAD_
-        self.W_init_embed = np.float32(np.random.uniform(-0.02, 0.02, [len(self.word_dict), 50]))
-        self.embedding = utils.convert_embed_2_numpy(self.embed_dict, embed = self.W_init_embed)
+        self.W_init_embed = np.float32(
+            np.random.uniform(-0.02, 0.02, [len(self.word_dict), 50]))
+        self.embedding = utils.convert_embed_2_numpy(
+            self.embed_dict, embed = self.W_init_embed)
+
 
 class PairGenerator():
     def __init__(self, rel_file, config):
@@ -60,15 +68,18 @@ class PairGenerator():
                             pair_list.append( (d1, high_d2, low_d2) )
         print('Pair Instance Count:', len(pair_list))
         return pair_list
-        
+
     def get_batch(self, data1, data2):
         config = self.config
-        X1 = np.zeros((config['batch_size']*2, config['data1_maxlen']), dtype=np.int32)
+        X1 = np.zeros(
+            (config['batch_size']*2, config['data1_maxlen']), dtype=np.int32)
         X1_len = np.zeros((config['batch_size']*2,), dtype=np.int32)
-        X2 = np.zeros((config['batch_size']*2, config['data2_maxlen']), dtype=np.int32)
+        X2 = np.zeros(
+            (config['batch_size']*2, config['data2_maxlen']), dtype=np.int32)
         X2_len = np.zeros((config['batch_size']*2,), dtype=np.int32)
         Y = np.zeros((config['batch_size']*2,), dtype=np.int32)
-        F = np.zeros((config['batch_size']*2, config['feat_size']), dtype=np.float32)
+        F = np.zeros(
+            (config['batch_size']*2, config['feat_size']), dtype=np.float32)
 
         Y[::2] = 1
         X1[:] = config['fill_word']
@@ -84,9 +95,10 @@ class PairGenerator():
             X2[i*2+1, :d2n_len], X2_len[i*2+1] = data2[d2n][:d2n_len], d2n_len
             #F[i*2] = features[(d1, d2p)]
             #F[i*2+1] = features[(d1, d2n)]
-            
+
         return X1, X1_len, X2, X2_len, Y, F
-   
+
+
 class ListGenerator():
     def __init__(self, rel_file, config):
         rel = utils.read_relation(filename=rel_file)
@@ -107,9 +119,11 @@ class ListGenerator():
     def get_batch(self, data1, data2):
         config = self.config
         for i, (d1, d2_list) in enumerate(self.list_list):
-            X1 = np.zeros((len(d2_list), config['data1_maxlen']), dtype=np.int32)
+            X1 = np.zeros(
+                (len(d2_list), config['data1_maxlen']), dtype=np.int32)
             X1_len = np.zeros((len(d2_list),), dtype=np.int32)
-            X2 = np.zeros((len(d2_list), config['data2_maxlen']), dtype=np.int32)
+            X2 = np.zeros(
+                (len(d2_list), config['data2_maxlen']), dtype=np.int32)
             X2_len = np.zeros((len(d2_list),), dtype=np.int32)
             Y = np.zeros((len(d2_list),), dtype= np.int32)
             F = np.zeros((len(d2_list), config['feat_size']), dtype=np.float32)
@@ -123,6 +137,7 @@ class ListGenerator():
                 Y[j] = l
                 #F[j] = features[(d1, d2)]
             yield X1, X1_len, X2, X2_len, Y, F
+
 
 if __name__ == '__main__':
     loader = DataLoader('./config/letor07_mp_fold1.model')
