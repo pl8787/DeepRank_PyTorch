@@ -4,26 +4,39 @@ import torch.nn.functional as F
 
 
 class SelectNet(nn.Module):
-    def __init__(self):
+    def __init__(self, config):
         super().__init__()
+        self.config = config
 
     def forward(self, x):
         return x
 
 
-class QueryCentricNet(SelectNet):
-    def __init__(self, embedding, max_match=20, win_size=15, dim_w=2, dim_v=2):
-        super().__init__()
+class IdentityNet(SelectNet):
+    def __init__(self, config):
+        super().__init__(config)
 
-        self.max_match = max_match
-        self.win_size = win_size
+    def forward(self, x):
+        q = x[0][:self.config['q_limit']]
+        d = x[1][:self.config['d_limit']]
+        return q, d
+
+
+class QueryCentricNet(SelectNet):
+    def __init__(self, config, embedding):
+        super().__init__(config)
+
+        self.max_match = self.config['max_match']
+        self.win_size = self.config['win_size']
 
         if type(embedding) is np.ndarray:
             embedding = torch.from_mumpy(embedding)
         self.embedding = nn.Embedding.from_pretrained(embedding)
 
-        self.fc_w = nn.Linear(self.embedding.embedding_dim, dim_w)
-        self.fc_v = nn.Linear(self.embedding.embedding_dim, dim_v)
+        self.fc_w = nn.Linear(
+            self.embedding.embedding_dim, self.config['dim_w'])
+        self.fc_v = nn.Linear(
+            self.embedding.embedding_dim, self.config['dim_v'])
 
     def get_win(self, document, position):
         start_id = max(0, position-self.win_size)
@@ -47,8 +60,8 @@ class QueryCentricNet(SelectNet):
 
 
 class PointerNet(SelectNet):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, config):
+        super().__init__(config)
         self.conv1 = nn.Conv2d(1, 20, 5, 1)
         self.conv2 = nn.Conv2d(20, 50, 5, 1)
         self.fc1 = nn.Linear(4*4*50, 500)
