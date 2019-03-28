@@ -1,6 +1,7 @@
 from collections import defaultdict
 
 import numpy as np
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -10,18 +11,27 @@ class SelectNet(nn.Module):
         super().__init__()
         self.config = config
 
-    def forward(self, x):
+    def _to_tensor(self, x):
+        if type(x) is np.ndarray:
+            return torch.from_numpy(np.int64(x))
         return x
+
+    def forward(self, q_data, d_data, q_len, d_len):
+        return q_data, d_data, q_len, d_len
 
 
 class IdentityNet(SelectNet):
     def __init__(self, config):
         super().__init__(config)
 
-    def forward(self, x):
-        q = x[0][:self.config['q_limit']]
-        d = x[1][:self.config['d_limit']]
-        return q, d
+    def forward(self, q_data, d_data, q_len, d_len):
+        q_data, d_data, q_len, d_len = map(self._to_tensor,
+            [q_data, d_data, q_len, d_len])
+        q_data = q_data[:, :self.config['q_limit']]
+        d_data = d_data[:, :self.config['d_limit']]
+        q_len = torch.min(q_len, torch.tensor(self.config['q_limit']))
+        d_len = torch.min(d_len, torch.tensor(self.config['d_limit']))
+        return q_data, d_data, q_len, d_len
 
 
 class QueryCentricNet(SelectNet):

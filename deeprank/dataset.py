@@ -12,7 +12,7 @@ import sys
 
 import numpy as np
 
-import utils
+from deeprank import utils
 
 
 class DataLoader():

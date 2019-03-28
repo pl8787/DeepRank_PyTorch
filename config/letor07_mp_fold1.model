@@ -11,10 +11,13 @@
 "train_iters": 2500,
 "feat_size": 0,
 
+"q_limit": 20,
+"d_limit": 200,
+
 "max_match": 20,
 "win_size": 15,
 "dim_q": 2,
-"dim_d": 2
+"dim_d": 2,
 
 "data1_psize": 3,
 "data2_psize": 10,
