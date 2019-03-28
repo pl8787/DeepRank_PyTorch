@@ -44,12 +44,6 @@ class MatchPyramidNet(rank_module.RankNet):
             return self.forward_v2(q_data, d_data, q_len, d_len)
 
     def forward_v0(self, q_data, d_data, q_len, d_len):
-        dpool_index = self._dynamic_pooling_index(
-            q_len,
-            d_len,
-            self.config['q_limit'],
-            self.config['d_limit'])
-
         embed_q = self.embedding(q_data)
         embed_d = self.embedding(d_data)
         simmat = torch.einsum('ixk,iyk->ixy', embed_q, embed_d)
@@ -58,6 +52,14 @@ class MatchPyramidNet(rank_module.RankNet):
 
         for conv_op in self.conv_layers:
             o = F.relu(conv_op(o))
+
+        dpool_index = self._dynamic_pooling_index(
+            q_len,
+            d_len,
+            o.shape[2],
+            o.shape[3])
+            #self.config['q_limit'],
+            #self.config['d_limit'])
 
         dpool_ret = []
         for i in range(len(dpool_index)):
@@ -85,12 +87,6 @@ class MatchPyramidNet(rank_module.RankNet):
         return o
 
     def forward_v1(self, q_data, d_data, q_len, d_len):
-        dpool_index = self._dynamic_pooling_index(
-            q_len,
-            d_len,
-            self.config['q_limit'],
-            self.config['d_limit'])
-
         embed_q = self.embedding(q_data)
         embed_d = self.embedding(d_data)
         simmat = torch.einsum('ixk,iyk->ixy', embed_q, embed_d)
@@ -98,6 +94,14 @@ class MatchPyramidNet(rank_module.RankNet):
 
         for conv_op in self.conv_layers:
             o = F.relu(conv_op(o))
+
+        dpool_index = self._dynamic_pooling_index(
+            q_len,
+            d_len,
+            o.shape[2],
+            o.shape[3])
+            #self.config['q_limit'],
+            #self.config['d_limit'])
 
         #print(d_len[0])
         #print(o[0][0][0])
@@ -164,15 +168,17 @@ class MatchPyramidNet(rank_module.RankNet):
                          fixed_length_right):
             one_length_left_ = one_length_left.to(torch.float32)
             one_length_right_ = one_length_right.to(torch.float32)
+            fixed_length_left_ = fixed_length_left.to(torch.float32)
+            fixed_length_right_ = fixed_length_right.to(torch.float32)
             if one_length_left == 0:
-                stride_left = fixed_length_left
+                stride_left = fixed_length_left_
             else:
-                stride_left = 1.0 * fixed_length_left / one_length_left_
+                stride_left = 1.0 * fixed_length_left_ / one_length_left_
     
             if one_length_right == 0:
-                stride_right = fixed_length_right
+                stride_right = fixed_length_right_
             else:
-                stride_right = 1.0 * fixed_length_right / one_length_right_
+                stride_right = 1.0 * fixed_length_right_ / one_length_right_
     
             one_idx_left = torch.tensor([int(i / stride_left)
                             for i in range(fixed_length_left)], dtype=torch.int64)
