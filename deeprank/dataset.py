@@ -111,7 +111,7 @@ class ListGenerator():
         rel = utils.read_relation(filename=rel_file)
         self.list_list = self.make_list(rel)
         self.config = config
-        self.device
+        self.device = device
 
     def make_list(self, rel):
         list_list = {}

@@ -142,7 +142,8 @@ class MatchPyramidNet(rank_module.RankNet):
 
         dpool_ret = []
         for i in range(len(o)):
-            dpool_ret.append(self.dpool_layer(o[i:i+1, :, :q_len[i], :d_len[i]]))
+            dpool_ret.append(
+                self.dpool_layer(o[i:i+1, :, :q_len[i], :d_len[i]]))
 
         o = torch.cat(dpool_ret, 0)
         o = self.dpool_layer(o)
@@ -164,7 +165,7 @@ class MatchPyramidNet(rank_module.RankNet):
                                fixed_length_right,
                                compress_ratio_left=1,
                                compress_ratio_right=1):
-    
+
         def _dpool_index(one_length_left,
                          one_length_right,
                          fixed_length_left,
@@ -179,16 +180,18 @@ class MatchPyramidNet(rank_module.RankNet):
                 stride_left = fixed_length_left_
             else:
                 stride_left = 1.0 * fixed_length_left_ / one_length_left_
-    
+
             if one_length_right == 0:
                 stride_right = fixed_length_right_
             else:
                 stride_right = 1.0 * fixed_length_right_ / one_length_right_
-    
-            one_idx_left = torch.tensor([int(i / stride_left)
-                            for i in range(fixed_length_left)], dtype=torch.int64)
-            one_idx_right = torch.tensor([int(i / stride_right)
-                             for i in range(fixed_length_right)], dtype=torch.int64)
+
+            one_idx_left = torch.tensor([
+                int(i / stride_left)
+                for i in range(fixed_length_left)], dtype=torch.int64)
+            one_idx_right = torch.tensor([
+                int(i / stride_right)
+                for i in range(fixed_length_right)], dtype=torch.int64)
             mesh1, mesh2 = torch.meshgrid(one_idx_left, one_idx_right)
             index_one = (mesh1 * fixed_length_right + mesh2).view(-1)
             '''
@@ -202,7 +205,7 @@ class MatchPyramidNet(rank_module.RankNet):
             input()
             '''
             return index_one
-    
+
         index = []
         dpool_bias_left = dpool_bias_right = 0
         if fixed_length_left % compress_ratio_left != 0:
