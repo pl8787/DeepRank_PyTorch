@@ -11,6 +11,7 @@ import random
 import sys
 
 import numpy as np
+import torch
 
 from deeprank import utils
 
@@ -45,10 +46,11 @@ class DataLoader():
 
 
 class PairGenerator():
-    def __init__(self, rel_file, config):
+    def __init__(self, rel_file, config, device):
         rel = utils.read_relation(filename=rel_file)
         self.pair_list = self.make_pair(rel)
         self.config = config
+        self.device = device
 
     def make_pair(self, rel):
         rel_set = {}
@@ -72,12 +74,12 @@ class PairGenerator():
     def get_batch(self, data1, data2):
         config = self.config
         X1 = np.zeros(
-            (config['batch_size']*2, config['data1_maxlen']), dtype=np.int32)
-        X1_len = np.zeros((config['batch_size']*2,), dtype=np.int32)
+            (config['batch_size']*2, config['data1_maxlen']), dtype=np.int64)
+        X1_len = np.zeros((config['batch_size']*2,), dtype=np.int64)
         X2 = np.zeros(
-            (config['batch_size']*2, config['data2_maxlen']), dtype=np.int32)
-        X2_len = np.zeros((config['batch_size']*2,), dtype=np.int32)
-        Y = np.zeros((config['batch_size']*2,), dtype=np.int32)
+            (config['batch_size']*2, config['data2_maxlen']), dtype=np.int64)
+        X2_len = np.zeros((config['batch_size']*2,), dtype=np.int64)
+        Y = np.zeros((config['batch_size']*2,), dtype=np.int64)
         F = np.zeros(
             (config['batch_size']*2, config['feat_size']), dtype=np.float32)
 
@@ -96,14 +98,20 @@ class PairGenerator():
             #F[i*2] = features[(d1, d2p)]
             #F[i*2+1] = features[(d1, d2n)]
 
-        return X1, X1_len, X2, X2_len, Y, F
+        return torch.from_numpy(X1).to(self.device), \
+            torch.from_numpy(X1_len).to(self.device), \
+            torch.from_numpy(X2).to(self.device), \
+            torch.from_numpy(X2_len).to(self.device), \
+            torch.from_numpy(Y).to(self.device), \
+            torch.from_numpy(F).to(self.device)
 
 
 class ListGenerator():
-    def __init__(self, rel_file, config):
+    def __init__(self, rel_file, config, device):
         rel = utils.read_relation(filename=rel_file)
         self.list_list = self.make_list(rel)
         self.config = config
+        self.device
 
     def make_list(self, rel):
         list_list = {}
@@ -120,12 +128,12 @@ class ListGenerator():
         config = self.config
         for i, (d1, d2_list) in enumerate(self.list_list):
             X1 = np.zeros(
-                (len(d2_list), config['data1_maxlen']), dtype=np.int32)
-            X1_len = np.zeros((len(d2_list),), dtype=np.int32)
+                (len(d2_list), config['data1_maxlen']), dtype=np.int64)
+            X1_len = np.zeros((len(d2_list),), dtype=np.int64)
             X2 = np.zeros(
-                (len(d2_list), config['data2_maxlen']), dtype=np.int32)
-            X2_len = np.zeros((len(d2_list),), dtype=np.int32)
-            Y = np.zeros((len(d2_list),), dtype= np.int32)
+                (len(d2_list), config['data2_maxlen']), dtype=np.int64)
+            X2_len = np.zeros((len(d2_list),), dtype=np.int64)
+            Y = np.zeros((len(d2_list),), dtype= np.int64)
             F = np.zeros((len(d2_list), config['feat_size']), dtype=np.float32)
             X1[:] = config['fill_word']
             X2[:] = config['fill_word']
@@ -136,7 +144,12 @@ class ListGenerator():
                 X2[j, :d2_len], X2_len[j] = data2[d2][:d2_len], d2_len
                 Y[j] = l
                 #F[j] = features[(d1, d2)]
-            yield X1, X1_len, X2, X2_len, Y, F
+            yield torch.from_numpy(X1).to(self.device), \
+                  torch.from_numpy(X1_len).to(self.device), \
+                  torch.from_numpy(X2).to(self.device), \
+                  torch.from_numpy(X2_len).to(self.device), \
+                  torch.from_numpy(Y).to(self.device), \
+                  torch.from_numpy(F).to(self.device)
 
 
 if __name__ == '__main__':

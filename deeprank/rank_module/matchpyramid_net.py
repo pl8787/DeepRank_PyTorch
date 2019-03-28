@@ -7,8 +7,8 @@ from deeprank import rank_module
 
 
 class MatchPyramidNet(rank_module.RankNet):
-    def __init__(self, config):
-        super(MatchPyramidNet, self).__init__(config)
+    def __init__(self, config, device=None):
+        super(MatchPyramidNet, self).__init__(config, device)
         self.embedding = nn.Embedding(
             config['vocab_size'],
             config['embed_dim'],
@@ -23,6 +23,7 @@ class MatchPyramidNet(rank_module.RankNet):
         for cout, h, w in config['conv_params']:
             self.conv_layers.append(nn.Conv2d(cin, cout, [h, w], padding=1))
             cin = cout
+        self.conv_sequential = nn.Sequential(*self.conv_layers)
 
         self.dpool_layer = nn.AdaptiveMaxPool2d(config['dpool_size'])
 
@@ -32,6 +33,8 @@ class MatchPyramidNet(rank_module.RankNet):
         for hout in config['fc_params']:
             self.fc_layers.append(nn.Linear(hin, hout))
             hin = hout
+
+        self.fc_sequential = nn.Sequential(*self.fc_layers)
 
         self.out_layer = nn.Linear(hin, 1)
 
@@ -65,7 +68,7 @@ class MatchPyramidNet(rank_module.RankNet):
         for i in range(len(dpool_index)):
             dpool_ret.append(dpool_index[i] + \
                 i * self.config['q_limit'] * self.config['d_limit'])
-        dpool_reidx = torch.stack(dpool_ret)
+        dpool_reidx = torch.stack(dpool_ret).to(self.device)
         #print(d_len[0])
         #print(o[0][0][0].shape)
         #print(o[0][0][0])
@@ -168,8 +171,10 @@ class MatchPyramidNet(rank_module.RankNet):
                          fixed_length_right):
             one_length_left_ = one_length_left.to(torch.float32)
             one_length_right_ = one_length_right.to(torch.float32)
-            fixed_length_left_ = fixed_length_left.to(torch.float32)
-            fixed_length_right_ = fixed_length_right.to(torch.float32)
+            fixed_length_left_ = fixed_length_left
+            fixed_length_right_ = fixed_length_right
+            #fixed_length_left_ = fixed_length_left.to(torch.float32)
+            #fixed_length_right_ = fixed_length_right.to(torch.float32)
             if one_length_left == 0:
                 stride_left = fixed_length_left_
             else:

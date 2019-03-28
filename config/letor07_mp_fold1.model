@@ -9,7 +9,7 @@
 "embed_size": 50,
 "reverse_doc": false,
 "train_iters": 2500,
-"feat_size": 0,
+"feat_size": 1,
 
 "q_limit": 20,
 "d_limit": 200,
