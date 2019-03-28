@@ -1,29 +1,12 @@
 from __future__ import print_function
-import argparse
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-
-class RankNet(nn.Module):
-    def __init__(self, config):
-        super(RankNet, self).__init__()
-        self.config = config
-        # S: sentence, L: list, LL: list of list
-        self.input_type = 'S'
-
-    def forward(self, q_data, d_data, q_len, d_len):
-        return q_data, d_data, q_len, d_len
-
-    def pair_loss(self, x, y):
-        x = x.view(-1)
-        pos = x[::2]
-        neg = x[1::2]
-        loss = torch.mean(torch.max(1.0 + neg - pos, torch.tensor(0.0)))
-        return loss
+from deeprank import rank_module
 
 
-class MatchPyramidNet(RankNet):
+class MatchPyramidNet(rank_module.RankNet):
     def __init__(self, config):
         super(MatchPyramidNet, self).__init__(config)
         self.embedding = nn.Embedding(
@@ -70,7 +53,8 @@ class MatchPyramidNet(RankNet):
         embed_q = self.embedding(q_data)
         embed_d = self.embedding(d_data)
         simmat = torch.einsum('ixk,iyk->ixy', embed_q, embed_d)
-        o = F.relu(simmat.view(-1, 1, q_data.shape[1], d_data.shape[1]))
+        o = simmat.view(-1, 1, q_data.shape[1], d_data.shape[1])
+        #o = F.relu(o)
 
         for conv_op in self.conv_layers:
             o = F.relu(conv_op(o))
@@ -225,21 +209,3 @@ class MatchPyramidNet(RankNet):
                                       cur_fixed_length_right))
         return index
 
-
-class DeepRankNet(RankNet):
-    def __init__(self):
-        super(DeepRankNet, self).__init__()
-        self.conv1 = nn.Conv2d(1, 20, 5, 1)
-        self.conv2 = nn.Conv2d(20, 50, 5, 1)
-        self.fc1 = nn.Linear(4*4*50, 500)
-        self.fc2 = nn.Linear(500, 10)
-
-    def forward(self, x):
-        x = F.relu(self.conv1(x))
-        x = F.max_pool2d(x, 2, 2)
-        x = F.relu(self.conv2(x))
-        x = F.max_pool2d(x, 2, 2)
-        x = x.view(-1, 4*4*50)
-        x = F.relu(self.fc1(x))
-        x = self.fc2(x)
-        return F.log_softmax(x, dim=1)
