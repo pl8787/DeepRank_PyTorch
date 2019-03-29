@@ -38,6 +38,8 @@ class MatchPyramidNet(rank_module.RankNet):
 
         self.out_layer = nn.Linear(hin, 1)
 
+        self._dpool_cache = {}
+
     def forward(self, q_data, d_data, q_len, d_len, mode=0):
         if mode == 0:
             return self.forward_v0(q_data, d_data, q_len, d_len)
@@ -45,13 +47,15 @@ class MatchPyramidNet(rank_module.RankNet):
             return self.forward_v1(q_data, d_data, q_len, d_len)
         elif mode == 2:
             return self.forward_v2(q_data, d_data, q_len, d_len)
+        elif mode == 3:
+            return self.forward_v3(q_data, d_data, q_len, d_len)
 
     def forward_v0(self, q_data, d_data, q_len, d_len):
         embed_q = self.embedding(q_data)
         embed_d = self.embedding(d_data)
         simmat = torch.einsum('ixk,iyk->ixy', embed_q, embed_d)
         o = simmat.view(-1, 1, q_data.shape[1], d_data.shape[1])
-        #o = F.relu(o)
+        o = F.relu(o)
 
         for conv_op in self.conv_layers:
             o = F.relu(conv_op(o))
@@ -61,26 +65,24 @@ class MatchPyramidNet(rank_module.RankNet):
             d_len,
             o.shape[2],
             o.shape[3])
-            #self.config['q_limit'],
-            #self.config['d_limit'])
 
+        out_channel = self.config['conv_params'][-1][0]
         dpool_ret = []
         for i in range(len(dpool_index)):
-            dpool_ret.append(dpool_index[i] + \
-                i * self.config['q_limit'] * self.config['d_limit'])
+            for j in range(out_channel):
+                dpool_ret.append(dpool_index[i] + \
+                    j * self.config['q_limit'] * self.config['d_limit'] + \
+                    i * out_channel * self.config['q_limit'] * self.config['d_limit'])
+
         dpool_reidx = torch.stack(dpool_ret).to(q_data.device)
-        #print(d_len[0])
-        #print(o[0][0][0].shape)
-        #print(o[0][0][0])
-        o = o.take(dpool_reidx).view(-1, 1, 
+
+        o = o.take(dpool_reidx).view(-1, out_channel, 
             self.config['q_limit'], self.config['d_limit'])
-        #print(o[0][0][0].shape)
-        #print(o[0][0][0])
-        #input()
+
         o = self.dpool_layer(o)
 
         o = o.view(-1,
-            self.config['conv_params'][-1][0] * self.config['dpool_size'][0] * 
+            out_channel * self.config['dpool_size'][0] * 
                 self.config['dpool_size'][1])
 
         for fc_op in self.fc_layers:
@@ -103,21 +105,14 @@ class MatchPyramidNet(rank_module.RankNet):
             d_len,
             o.shape[2],
             o.shape[3])
-            #self.config['q_limit'],
-            #self.config['d_limit'])
-
-        #print(d_len[0])
-        #print(o[0][0][0])
 
         dpool_ret = []
         for i in range(len(dpool_index)):
-            dpool_ret.append(o[i][0].take(dpool_index[i]))
+            for j in range(8):
+                dpool_ret.append(o[i][j].take(dpool_index[i]))
 
         o = torch.stack(dpool_ret)
-        o = o.view(-1, 1, self.config['q_limit'], self.config['d_limit'])
-
-        #print(o[0][0][0])
-        #input()
+        o = o.view(-1, 8, self.config['q_limit'], self.config['d_limit'])
 
         o = self.dpool_layer(o)
 
@@ -158,6 +153,27 @@ class MatchPyramidNet(rank_module.RankNet):
         o = self.out_layer(o)
         return o
 
+    def forward_v3(self, q_data, d_data, q_len, d_len):
+        embed_q = self.embedding(q_data)
+        embed_d = self.embedding(d_data)
+        simmat = torch.einsum('ixk,iyk->ixy', embed_q, embed_d)
+        o = F.relu(simmat.view(-1, 1, q_data.shape[1], d_data.shape[1]))
+
+        for conv_op in self.conv_layers:
+            o = F.relu(conv_op(o))
+
+        o = self.dpool_layer(o)
+
+        o = o.view(-1,
+            self.config['conv_params'][-1][0] * self.config['dpool_size'][0] * 
+                self.config['dpool_size'][1])
+
+        for fc_op in self.fc_layers:
+            o = F.relu(fc_op(o))
+
+        o = self.out_layer(o)
+        return o
+
     def _dynamic_pooling_index(self,
                                length_left,
                                length_right,
@@ -166,10 +182,14 @@ class MatchPyramidNet(rank_module.RankNet):
                                compress_ratio_left=1,
                                compress_ratio_right=1):
 
+
         def _dpool_index(one_length_left,
                          one_length_right,
                          fixed_length_left,
                          fixed_length_right):
+            key = (one_length_left.item(), one_length_right.item())
+            if key in self._dpool_cache:
+                return self._dpool_cache[key]
             one_length_left_ = one_length_left.to(torch.float32)
             one_length_right_ = one_length_right.to(torch.float32)
             fixed_length_left_ = fixed_length_left
@@ -204,6 +224,7 @@ class MatchPyramidNet(rank_module.RankNet):
             print(index_one)
             input()
             '''
+            self._dpool_cache[key] = index_one
             return index_one
 
         index = []
