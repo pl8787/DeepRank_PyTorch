@@ -13,8 +13,6 @@ class IdentityNet(select_module.SelectNet):
         super().__init__(config)
 
     def forward(self, q_data, d_data, q_len, d_len):
-        q_data, d_data, q_len, d_len = map(self._to_tensor,
-            [q_data, d_data, q_len, d_len])
         q_data = q_data[:, :self.config['q_limit']]
         d_data = d_data[:, :self.config['d_limit']]
         q_len = torch.clamp(q_len, max=self.config['q_limit'])

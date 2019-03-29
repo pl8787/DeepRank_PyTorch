@@ -11,10 +11,5 @@ class SelectNet(nn.Module):
         super().__init__()
         self.config = config
 
-    def _to_tensor(self, x):
-        if type(x) is np.ndarray:
-            return torch.from_numpy(np.int64(x))
-        return x
-
     def forward(self, q_data, d_data, q_len, d_len):
         return q_data, d_data, q_len, d_len

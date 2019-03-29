@@ -97,12 +97,7 @@ class PairGenerator():
             #F[i*2] = features[(d1, d2p)]
             #F[i*2+1] = features[(d1, d2n)]
 
-        return torch.from_numpy(X1), \
-            torch.from_numpy(X1_len), \
-            torch.from_numpy(X2), \
-            torch.from_numpy(X2_len), \
-            torch.from_numpy(Y), \
-            torch.from_numpy(F)
+        return X1, X1_len, X2, X2_len, Y, F
 
 
 class ListGenerator():
@@ -142,12 +137,7 @@ class ListGenerator():
                 X2[j, :d2_len], X2_len[j] = data2[d2][:d2_len], d2_len
                 Y[j] = l
                 #F[j] = features[(d1, d2)]
-            yield torch.from_numpy(X1), \
-                  torch.from_numpy(X1_len), \
-                  torch.from_numpy(X2), \
-                  torch.from_numpy(X2_len), \
-                  torch.from_numpy(Y), \
-                  torch.from_numpy(F)
+            yield X1, X1_len, X2, X2_len, Y, F
 
 
 if __name__ == '__main__':

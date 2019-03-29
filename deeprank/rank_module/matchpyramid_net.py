@@ -68,7 +68,7 @@ class MatchPyramidNet(rank_module.RankNet):
         for i in range(len(dpool_index)):
             dpool_ret.append(dpool_index[i] + \
                 i * self.config['q_limit'] * self.config['d_limit'])
-        dpool_reidx = torch.stack(dpool_ret).to(q_data)
+        dpool_reidx = torch.stack(dpool_ret).to(q_data.device)
         #print(d_len[0])
         #print(o[0][0][0].shape)
         #print(o[0][0][0])
