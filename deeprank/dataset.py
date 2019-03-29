@@ -46,11 +46,10 @@ class DataLoader():
 
 
 class PairGenerator():
-    def __init__(self, rel_file, config, device):
+    def __init__(self, rel_file, config):
         rel = utils.read_relation(filename=rel_file)
         self.pair_list = self.make_pair(rel)
         self.config = config
-        self.device = device
 
     def make_pair(self, rel):
         rel_set = {}
@@ -98,20 +97,19 @@ class PairGenerator():
             #F[i*2] = features[(d1, d2p)]
             #F[i*2+1] = features[(d1, d2n)]
 
-        return torch.from_numpy(X1).to(self.device), \
-            torch.from_numpy(X1_len).to(self.device), \
-            torch.from_numpy(X2).to(self.device), \
-            torch.from_numpy(X2_len).to(self.device), \
-            torch.from_numpy(Y).to(self.device), \
-            torch.from_numpy(F).to(self.device)
+        return torch.from_numpy(X1), \
+            torch.from_numpy(X1_len), \
+            torch.from_numpy(X2), \
+            torch.from_numpy(X2_len), \
+            torch.from_numpy(Y), \
+            torch.from_numpy(F)
 
 
 class ListGenerator():
-    def __init__(self, rel_file, config, device):
+    def __init__(self, rel_file, config):
         rel = utils.read_relation(filename=rel_file)
         self.list_list = self.make_list(rel)
         self.config = config
-        self.device = device
 
     def make_list(self, rel):
         list_list = {}
@@ -144,12 +142,12 @@ class ListGenerator():
                 X2[j, :d2_len], X2_len[j] = data2[d2][:d2_len], d2_len
                 Y[j] = l
                 #F[j] = features[(d1, d2)]
-            yield torch.from_numpy(X1).to(self.device), \
-                  torch.from_numpy(X1_len).to(self.device), \
-                  torch.from_numpy(X2).to(self.device), \
-                  torch.from_numpy(X2_len).to(self.device), \
-                  torch.from_numpy(Y).to(self.device), \
-                  torch.from_numpy(F).to(self.device)
+            yield torch.from_numpy(X1), \
+                  torch.from_numpy(X1_len), \
+                  torch.from_numpy(X2), \
+                  torch.from_numpy(X2_len), \
+                  torch.from_numpy(Y), \
+                  torch.from_numpy(F)
 
 
 if __name__ == '__main__':

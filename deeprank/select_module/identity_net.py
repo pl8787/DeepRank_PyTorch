@@ -9,16 +9,14 @@ from deeprank import select_module
 
 
 class IdentityNet(select_module.SelectNet):
-    def __init__(self, config, device=None):
-        super().__init__(config, device)
-        self.register_buffer('q_limit', torch.tensor(self.config['q_limit']))
-        self.register_buffer('d_limit', torch.tensor(self.config['d_limit']))
+    def __init__(self, config):
+        super().__init__(config)
 
     def forward(self, q_data, d_data, q_len, d_len):
         q_data, d_data, q_len, d_len = map(self._to_tensor,
             [q_data, d_data, q_len, d_len])
-        q_data = q_data[:, :self.q_limit.item()]
-        d_data = d_data[:, :self.d_limit.item()]
-        q_len = torch.min(q_len, self.q_limit)
-        d_len = torch.min(d_len, self.d_limit)
+        q_data = q_data[:, :self.config['q_limit']]
+        d_data = d_data[:, :self.config['d_limit']]
+        q_len = torch.clamp(q_len, max=self.config['q_limit'])
+        d_len = torch.clamp(d_len, max=self.config['d_limit'])
         return q_data, d_data, q_len, d_len

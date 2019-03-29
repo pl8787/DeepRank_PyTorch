@@ -7,10 +7,9 @@ import torch.nn.functional as F
 
 
 class SelectNet(nn.Module):
-    def __init__(self, config, device=None):
+    def __init__(self, config):
         super().__init__()
         self.config = config
-        self.device = device
 
     def _to_tensor(self, x):
         if type(x) is np.ndarray:

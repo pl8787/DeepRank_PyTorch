@@ -7,8 +7,8 @@ from deeprank import rank_module
 
 
 class MatchPyramidNet(rank_module.RankNet):
-    def __init__(self, config, device=None):
-        super(MatchPyramidNet, self).__init__(config, device)
+    def __init__(self, config):
+        super().__init__(config)
         self.embedding = nn.Embedding(
             config['vocab_size'],
             config['embed_dim'],
@@ -68,7 +68,7 @@ class MatchPyramidNet(rank_module.RankNet):
         for i in range(len(dpool_index)):
             dpool_ret.append(dpool_index[i] + \
                 i * self.config['q_limit'] * self.config['d_limit'])
-        dpool_reidx = torch.stack(dpool_ret).to(self.device)
+        dpool_reidx = torch.stack(dpool_ret).to(q_data)
         #print(d_len[0])
         #print(o[0][0][0].shape)
         #print(o[0][0][0])
