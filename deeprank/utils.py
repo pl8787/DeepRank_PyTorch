@@ -3,6 +3,7 @@
 
 import json
 import numpy as np
+import random
 
 # Read Word Dict and Inverse Word Dict
 def read_word_dict(filename):
@@ -64,3 +65,19 @@ def convert_embed_2_numpy(embed_dict, max_size=0, embed=None):
         embed[k] = np.array(embed_dict[k])
     print('Generate numpy embed:', embed.shape)
     return embed
+
+# evaluate MAP
+def eval_MAP(pred, gt):
+    map_value = 0.0
+    r = 0.0
+    c = list(zip(pred, gt))
+    random.shuffle(c)
+    c = sorted(c, key = lambda x:x[0], reverse=True)
+    for j, (p, g) in enumerate(c):
+        if g != 0:
+            r += 1
+            map_value += r/(j+1.0)
+    if r == 0:
+        return 0.0
+    else:
+        return map_value/r
