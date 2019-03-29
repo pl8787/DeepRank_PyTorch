@@ -9,59 +9,52 @@ from deeprank import select_module
 
 
 class QueryCentricNet(select_module.SelectNet):
-    def __init__(self, config, embedding):
+    def __init__(self, config):
         super().__init__(config)
 
         self.max_match = self.config['max_match']
         self.win_size = self.config['win_size']
 
-        if type(embedding) is np.ndarray:
-            embedding = torch.from_mumpy(embedding)
-        self.embedding = nn.Embedding.from_pretrained(embedding)
-
-        self.fc_q = nn.Linear(
-            self.embedding.embedding_dim, self.config['dim_q'])
-        self.fc_d = nn.Linear(
-            self.embedding.embedding_dim, self.config['dim_d'])
+        self.q_size = self.config['q_limit']
+        self.d_size = self.max_match
 
     def get_win(self, d, p):
         start = p - self.win_size
         stop = p + self.win_size + 1
         return d[start: stop]
 
-    def get_fuse(self, q_embed, win_embed, q_compress, win_compress):
-        q_compress_copy_shape = (
-            q_compress.shape[0], win_compress.shape[0], self.config['dim_q'])
-        win_compress_copy_shape = (
-            q_compress.shape[0], win_compress.shape[0], self.config['dim_d'])
+    def process_item(self, q_item, d_item, q_item_len, d_item_len):
 
-        q_compress_copy = q_compress.unsqueeze(1).expand(q_compress_copy_shape)
-        win_compress_copy = win_compress.unsqueeze(0).expand(
-            win_compress_copy_shape)
-        interact = q_embed.matmul(win_embed.t())[:, :, None]
+        # padding with -1, embedding will use the last one
+        d_pad = F.pad(d_item, (self.win_size, self.win_size), value=-1)
 
-        return torch.cat(
-            [q_compress_copy, win_compress_copy, interact], dim=2)
-
-    def forward(self, q, d):
-        q = torch.unique(q)
-        q_embed = self.embedding(q)
-        q_compress = self.fc_q(q_embed)
-
-        d_pad = F.pad(d, (self.win_size, self.win_size), value=-1)
-        snippets = defaultdict(list)
-        for qw in q:
-            for p, dw in enumerate(d_pad):
+        snippet = torch.ones(
+            [self.q_size, self.d_size, 2*self.win_size+1]).to(d_item)
+        snippet_len = torch.zeros(self.q_size).to(d_item)
+        for d_p in range(d_item_len):
+            dw = d_pad[d_p]
+            win = None
+            for q_p in range(q_item_len):
+                if snippet_len[q_p] >= self.max_match:
+                    continue
+                qw = q_item[q_p]
                 if dw.item() == qw.item():
-                    win = self.get_win(d_pad, p)
-                    win_embed = self.embedding(win)
-                    win_compress = self.fc_d(win_embed)
+                    win =  win if win is not None else self.get_win(d_pad, d_p)
+                    snippet[q_p, snippet_len[q_p]] = win
+                    snippet_len[q_p] += 1
 
-                    snippets[qw.item()].append(
-                        self.get_fuse(
-                            q_embed, win_embed, q_compress, win_compress))
+        return snippet, snippet_len
 
-                    if len(snippets[qw.item()]) > self.max_match:
-                        break
+    def forward(self, q_data, d_data, q_len, d_len):
 
-        return snippets
+        n_item = q_data.shape[0]
+        snippets = []
+        snippets_len = []
+        for i in range(n_item):
+            snippet, snippet_len = self.process_item(
+                q_data[i], d_data[i], q_len[i].item(), d_len[i].item())
+            snippets.append(snippet.unsqueeze(dim=0))
+            snippets_len.append(snippet_len.unsqueeze(dim=0))
+        snippets = torch.cat(snippets, dim=0)
+        snippets_len = torch.cat(snippets_len, dim=0)
+        return q_data, snippets, q_len, snippets_len
