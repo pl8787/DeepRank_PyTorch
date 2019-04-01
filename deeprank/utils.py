@@ -4,6 +4,8 @@
 import json
 import numpy as np
 import random
+import torch
+import torch.nn.functional as F
 
 # Read Word Dict and Inverse Word Dict
 def read_word_dict(filename):
@@ -83,18 +85,25 @@ def eval_MAP(pred, gt):
         return map_value/r
 
 # select-rank adaptor
-def data_adaptor(d_data, d_len, select_net, rank_net):
+def data_adaptor(d_data, d_len, select_net, rank_net, config):
     if select_net.output_type != rank_net.input_type:
         if select_net.output_type == 'LL':
             if rank_net.input_type == 'S':
-                d_len_new = [np.sum(np.sum(x)) for x in d_len]
-                return d_data.view(d_data.shape[0], -1), d_len_new
+                d_data_new = torch.cat(
+                    [ F.pad(x.view(1, -1), 
+                          pad=(0, config['d_limit']),
+                          value=config['pad_value']
+                      )[:,:config['d_limit']] for x in d_data],
+                    dim=0).to(d_data[0].device)
+
+                d_len_new = torch.clamp(torch.tensor([x.shape[0] * x.shape[1] for x in d_data]), max=config['d_limit']).to(d_data[0].device)
+                return d_data_new, d_len_new
             elif rank_net.input_type == 'L':
-                d_len_new = [np.sum(x) for x in d_len]
-                return d_data.view(d_data.shape[0], -1, d_data.shape[3]), d_len_new
+                return d_data, d_len
         elif select_net.output_type == 'L':
             if rank_net.input_type == 'S':
-                d_len_new = [np.sum(x) for x in d_len]
-                return d_data.view(d_data.shape[0], -1), d_len_new
+                d_data_new = [x.view(-1) for x in d_data]
+                d_len_new = [x.shape[0] * x.shape[1] for x in d_data]
+                return d_data_new, d_len_new
     return d_data, d_len
                 

@@ -14,7 +14,7 @@ class MatchPyramidNet(rank_module.RankNet):
         self.embedding = nn.Embedding(
             config['vocab_size'],
             config['embed_dim'],
-            padding_idx=0
+            padding_idx=config['pad_value']
         )
 
         self.embedding.weight.requires_grad = config['finetune_embed']

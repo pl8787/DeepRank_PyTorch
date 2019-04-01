@@ -130,9 +130,11 @@ class ListGenerator():
             X1 = np.zeros(
                 (len(d2_list), config['data1_maxlen']), dtype=np.int64)
             X1_len = np.zeros((len(d2_list),), dtype=np.int64)
+            X1_id = [''] * len(d2_list)
             X2 = np.zeros(
                 (len(d2_list), config['data2_maxlen']), dtype=np.int64)
             X2_len = np.zeros((len(d2_list),), dtype=np.int64)
+            X2_id = [''] * len(d2_list)
             Y = np.zeros((len(d2_list),), dtype= np.int64)
             F = np.zeros((len(d2_list), config['feat_size']), dtype=np.float32)
             X1[:] = config['fill_word']
@@ -143,8 +145,9 @@ class ListGenerator():
                 X1[j, :d1_len], X1_len[j] = data1[d1][:d1_len], d1_len
                 X2[j, :d2_len], X2_len[j] = data2[d2][:d2_len], d2_len
                 Y[j] = l
+                X1_id[j], X2_id[j] = d1, d2
                 #F[j] = features[(d1, d2)]
-            yield X1, X1_len, X2, X2_len, Y, F
+            yield X1, X1_len, X1_id, X2, X2_len, X2_id, Y, F
 
 
 if __name__ == '__main__':

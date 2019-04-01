@@ -13,5 +13,5 @@ class SelectNet(nn.Module):
         # S: sentence, L: list, LL: list of list
         self.output_type = 'S'
 
-    def forward(self, q_data, d_data, q_len, d_len):
+    def forward(self, q_data, d_data, q_len, d_len, q_id, d_id):
         return q_data, d_data, q_len, d_len

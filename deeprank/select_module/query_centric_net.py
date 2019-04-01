@@ -13,6 +13,8 @@ class QueryCentricNet(select_module.SelectNet):
         super().__init__(config)
         self.output_type = 'LL'
 
+        self.pad_value = self.config['pad_value']
+
         self.max_match = self.config['max_match']
         self.win_size = self.config['win_size']
 
@@ -30,7 +32,7 @@ class QueryCentricNet(select_module.SelectNet):
     def process_item(self, q_item, d_item, q_item_len, d_item_len):
 
         # padding with -1, embedding will use the last one
-        d_pad = F.pad(d_item, (self.win_size, self.win_size), value=-1)
+        d_pad = F.pad(d_item, (self.win_size, self.win_size), value=self.pad_value)
 
         snippet = []
         snippet_len = [0] * q_item_len
@@ -45,7 +47,12 @@ class QueryCentricNet(select_module.SelectNet):
                     win =  win if win is not None else self.get_win(d_pad, d_p)
                     snippet.append(win.unsqueeze(dim=0))
                     snippet_len[q_p] += 1
-        snippet = torch.cat(snippet, dim=0) if len(snippet) > 0 else None
+        try:
+            snippet = torch.cat(snippet, dim=0) if len(snippet) > 0 else torch.zeros(0, self.win_size*2+1, dtype=torch.int64).to(q_item.device)
+        except:
+            print(len(snippet))
+            print(snippet)
+            exit()
 
         return snippet, snippet_len
 
@@ -63,8 +70,8 @@ class QueryCentricNet(select_module.SelectNet):
                     q_data[i], d_data[i], q_len[i].item(), d_len[i].item())
             snippet, snippet_len = self.cache[key]
 
-            if snippet is not None:
-                snippets.append(snippet)
+            #if snippet is not None:
+            snippets.append(snippet)
             snippets_len.append(snippet_len)
 
         return q_data, snippets, q_len, snippets_len

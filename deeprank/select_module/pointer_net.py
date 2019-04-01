@@ -21,9 +21,10 @@ class PointerNet(select_module.SelectNet):
 
         self.embedding.weight.requires_grad = config['finetune_embed']
 
-        self.avg_pool_layer = nn.AvgPool1d(kernel_size=, stride=)
+        self.avg_pool_layer = nn.AvgPool1d(kernel_size=3, stride=1)
 
 
 
     def forward(self, q_data, d_data, q_len, d_len):
 
+        pass
