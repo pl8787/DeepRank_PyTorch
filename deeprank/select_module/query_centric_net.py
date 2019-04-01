@@ -62,8 +62,7 @@ class QueryCentricNet(select_module.SelectNet):
                     q_data[i], d_data[i], q_len[i].item(), d_len[i].item())
             snippet, snippet_len = self.cache[key]
 
-            if snippet is not None:
-                snippets.append(snippet)
+            snippets.append(snippet)
             snippets_len.append(snippet_len)
 
         return q_data, snippets, q_len, snippets_len
