@@ -81,3 +81,17 @@ def eval_MAP(pred, gt):
         return 0.0
     else:
         return map_value/r
+
+# select-rank adapter
+def data_adapter(d_data, select_net, rank_net):
+    if select_net.output_type != rank_net.input_type:
+        if select_net.output_type == 'LL':
+            if rank_net.input_type == 'S':
+                return d_data
+            elif rank_net.input_type == 'L':
+                return d_data
+        elif select_net.output_type == 'L':
+            if rank_net.input_type == 'S':
+                return d_data
+    return d_data
+                
