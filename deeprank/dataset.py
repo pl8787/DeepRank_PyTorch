@@ -75,9 +75,11 @@ class PairGenerator():
         X1 = np.zeros(
             (config['batch_size']*2, config['data1_maxlen']), dtype=np.int64)
         X1_len = np.zeros((config['batch_size']*2,), dtype=np.int64)
+        X1_id = [''] * (config['batch_size']*2)
         X2 = np.zeros(
             (config['batch_size']*2, config['data2_maxlen']), dtype=np.int64)
         X2_len = np.zeros((config['batch_size']*2,), dtype=np.int64)
+        X2_id = [''] * (config['batch_size']*2)
         Y = np.zeros((config['batch_size']*2,), dtype=np.int64)
         F = np.zeros(
             (config['batch_size']*2, config['feat_size']), dtype=np.float32)
@@ -87,17 +89,22 @@ class PairGenerator():
         X2[:] = config['fill_word']
         for i in range(config['batch_size']):
             d1, d2p, d2n = random.choice(self.pair_list)
+
             d1_len = min(config['data1_maxlen'], len(data1[d1]))
             d2p_len = min(config['data2_maxlen'], len(data2[d2p]))
             d2n_len = min(config['data2_maxlen'], len(data2[d2n]))
+
             X1[i*2,   :d1_len],  X1_len[i*2]   = data1[d1][:d1_len],   d1_len
             X2[i*2,   :d2p_len], X2_len[i*2]   = data2[d2p][:d2p_len], d2p_len
             X1[i*2+1, :d1_len],  X1_len[i*2+1] = data1[d1][:d1_len],   d1_len
             X2[i*2+1, :d2n_len], X2_len[i*2+1] = data2[d2n][:d2n_len], d2n_len
+
+            X1_id[i * 2], X2_id[i * 2] = d1, d2p
+            X1_id[i * 2 + 1], X2_id[i * 2 + 1] = d1, d2n
             #F[i*2] = features[(d1, d2p)]
             #F[i*2+1] = features[(d1, d2n)]
 
-        return X1, X1_len, X2, X2_len, Y, F
+        return X1, X1_len, X1_id, X2, X2_len, X2_id, Y, F
 
 
 class ListGenerator():
