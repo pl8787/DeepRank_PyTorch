@@ -9,6 +9,8 @@ from deeprank import rank_module
 class MatchPyramidNet(rank_module.RankNet):
     def __init__(self, config):
         super().__init__(config)
+        self.input_type = 'S'
+
         self.embedding = nn.Embedding(
             config['vocab_size'],
             config['embed_dim'],

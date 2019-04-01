@@ -82,16 +82,19 @@ def eval_MAP(pred, gt):
     else:
         return map_value/r
 
-# select-rank adapter
-def data_adapter(d_data, select_net, rank_net):
+# select-rank adaptor
+def data_adaptor(d_data, d_len, select_net, rank_net):
     if select_net.output_type != rank_net.input_type:
         if select_net.output_type == 'LL':
             if rank_net.input_type == 'S':
-                return d_data
+                d_len_new = [np.sum(np.sum(x)) for x in d_len]
+                return d_data.view(d_data.shape[0], -1), d_len_new
             elif rank_net.input_type == 'L':
-                return d_data
+                d_len_new = [np.sum(x) for x in d_len]
+                return d_data.view(d_data.shape[0], -1, d_data.shape[3]), d_len_new
         elif select_net.output_type == 'L':
             if rank_net.input_type == 'S':
-                return d_data
-    return d_data
+                d_len_new = [np.sum(x) for x in d_len]
+                return d_data.view(d_data.shape[0], -1), d_len_new
+    return d_data, d_len
                 

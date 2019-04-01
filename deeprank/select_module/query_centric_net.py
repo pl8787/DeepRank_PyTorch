@@ -11,6 +11,7 @@ from deeprank import select_module
 class QueryCentricNet(select_module.SelectNet):
     def __init__(self, config):
         super().__init__(config)
+        self.output_type = 'LL'
 
         self.max_match = self.config['max_match']
         self.win_size = self.config['win_size']
