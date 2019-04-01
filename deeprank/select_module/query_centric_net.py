@@ -81,6 +81,10 @@ class QueryCentricNet(select_module.SelectNet):
             snippets_len.append(snippet_len)
         return q_data, snippets, q_len, snippets_len
 
-
-    def forward(self, *args):
-        return self.forward_cache(*args)
+    def forward(
+            self, q_data, d_data, q_len, d_len, qid_list=None, did_list=None):
+        if qid_list is not None and did_list is not None:
+            return self.forward_cache(
+                q_data, d_data, q_len, d_len, qid_list, did_list)
+        else:
+            return self.forward_normal(q_data, d_data, q_len, d_len)
