@@ -49,10 +49,10 @@ class PointerNet(select_module.SelectNet):
         embed_q = self.embedding(q_data)
         embed_d = self.embedding(d_data)
 
-        INF = -1e6
         # B x D
         mask_d = torch.arange(self.config['d_limit'])[None, :] < d_len[:, None]
-        embed_d = embed_d + ((~mask_d).type(torch.float32) * INF)[:,:,None]
+        # B x 1 x D
+        mask_d = mask_d.type(torch.float32).unsqueeze(1)
         
         # B x E x Q  &  B x E x D
         embed_q_r = embed_q.permute(0, 2, 1)
@@ -63,9 +63,15 @@ class PointerNet(select_module.SelectNet):
         
         # B x E x D/2
         vec_d_list = self.d_avg_pool(embed_d_r)
+        # B x 1 x D/2
+        mask_d_list = self.d_avg_pool(mask_d)
 
         # B x D/2
         logit_val = torch.einsum('ix,ixk->ik', vec_q, vec_d_list)
+
+        INF = -1e6
+        logit_val = logit_val + (1.0 - mask_d_list.squeeze(1)) * INF
+        #print(logit_val[0])
 
         top_k_val, top_k_idx = torch.topk(logit_val, k=self.max_match, dim=1)
         #prob_val = F.softmax(logit_val, dim=1)
