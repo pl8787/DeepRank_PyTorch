@@ -37,6 +37,7 @@ class QueryCentricNet(select_module.SelectNet):
         snippet = []
         snippet_len = [0] * q_item_len
         for d_p in range(d_item_len):
+            d_p += self.win_size
             dw = d_pad[d_p]
             win = None
             for q_p in range(q_item_len):
