@@ -23,7 +23,8 @@ class MatchPyramidNet(rank_module.RankNet):
 
         self.conv_layers = []
         for cout, h, w in config['conv_params']:
-            self.conv_layers.append(nn.Conv2d(cin, cout, [h, w], padding=1))
+            self.conv_layers.append(nn.Conv2d(cin, cout, [h, w],
+                padding=[h//2, w//2]))
             cin = cout
         self.conv_sequential = nn.Sequential(*self.conv_layers)
 
