@@ -9,7 +9,7 @@ from deeprank import select_module
 
 
 class QueryCentricNet(select_module.SelectNet):
-    def __init__(self, config):
+    def __init__(self, config, out_device=None):
         super().__init__(config)
         self.output_type = 'LL'
 
@@ -23,6 +23,7 @@ class QueryCentricNet(select_module.SelectNet):
 
         # key (doc_id, q_item)
         self.cache = {}
+        self.out_device = out_device
 
     def get_win(self, d, p):
         start = p - self.win_size
@@ -70,8 +71,6 @@ class QueryCentricNet(select_module.SelectNet):
                 self.cache[key] = self.process_item(
                     q_data[i], d_data[i], q_len[i].item(), d_len[i].item())
             snippet, snippet_len = self.cache[key]
-
-            #if snippet is not None:
             snippets.append(snippet)
             snippets_len.append(snippet_len)
 
@@ -85,15 +84,22 @@ class QueryCentricNet(select_module.SelectNet):
         for i in range(n_item):
             snippet, snippet_len = self.process_item(
                 q_data[i], d_data[i], q_len[i].item(), d_len[i].item())
-            if snippet is not None:
-                snippets.append(snippet)
+            snippets.append(snippet)
             snippets_len.append(snippet_len)
+
         return q_data, snippets, q_len, snippets_len
 
     def forward(
             self, q_data, d_data, q_len, d_len, qid_list=None, did_list=None):
         if qid_list is not None and did_list is not None:
-            return self.forward_cache(
+            q_data, snippets, q_len, snippets_len = self.forward_cache(
                 q_data, d_data, q_len, d_len, qid_list, did_list)
         else:
-            return self.forward_normal(q_data, d_data, q_len, d_len)
+            q_data, snippets, q_len, snippets_len = self.forward_normal(
+                q_data, d_data, q_len, d_len)
+
+        if self.out_device:
+            q_data = q_data.to(self.out_device)
+            snippets = [snippet.to(self.out_device) for snippet in snippets]
+
+        return q_data, snippets, q_len, snippets_len
