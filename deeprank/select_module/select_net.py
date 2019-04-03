@@ -15,3 +15,6 @@ class SelectNet(nn.Module):
 
     def forward(self, q_data, d_data, q_len, d_len, q_id, d_id):
         return q_data, d_data, q_len, d_len
+
+    def loss(self, reward):
+        return None

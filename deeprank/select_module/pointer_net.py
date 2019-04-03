@@ -69,16 +69,30 @@ class PointerNet(select_module.SelectNet):
         # B x D/2
         logit_val = torch.einsum('ix,ixk->ik', vec_q, vec_d_list)
 
-        INF = -1e6
-        logit_val = logit_val + (1.0 - mask_d_list.squeeze(1)) * INF
+        #INF = -1e6
+        #logit_val = logit_val + (1.0 - mask_d_list.squeeze(1)) * INF
         #print(logit_val[0])
 
-        top_k_val, top_k_idx = torch.topk(logit_val, k=self.max_match, dim=1)
-        #prob_val = F.softmax(logit_val, dim=1)
+        # B x K
+        prob_val = F.softmax(logit_val, dim=1)
+        self.top_k_val, self.top_k_idx = \
+            torch.topk(prob_val, k=self.max_match, dim=1)
 
         d_snippet = []
-        d_snippet_len = [[self.max_match] for i in range(len(top_k_idx))]
-        for i in range(len(top_k_idx)):
-            d_snippet.append(self.process_item(d_data[i], top_k_idx[i]))
+        d_snippet_len = [[self.max_match] for i in range(len(self.top_k_idx))]
+        for i in range(len(self.top_k_idx)):
+            d_snippet.append(self.process_item(d_data[i], self.top_k_idx[i]))
         
         return q_data, d_snippet, q_len, d_snippet_len
+
+    def loss(self, reward):
+        # B
+        sum_log_prob = torch.log(self.top_k_val).sum(dim=1)
+        # B/2
+        pos_sum_log_prob = sum_log_prob[::2]
+        neg_sum_log_prob = sum_log_prob[1::2]
+
+        exp_reward = reward * (pos_sum_log_prob + neg_sum_log_prob)
+
+        loss = exp_reward.mean()
+        return loss
