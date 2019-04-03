@@ -25,7 +25,13 @@
 "s_reduce": 1,
 "p_reduce": [0, 0],
 
-"en_conv_c_out": 4,
+"c_en_conv_out": 4,
+"k_en_conv": 3,
+"s_en_conv": 1,
+"p_en_conv": 1,
+
+"en_pool_out": [1, 1],
+"en_leaky": 0.2,
 
 
 "data1_psize": 3,

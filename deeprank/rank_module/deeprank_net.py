@@ -34,7 +34,16 @@ class DeepRankNet(rank_module.RankNet):
 
         self.win = 2 * config['win_size'] + 1
 
-    def forward(self, q_data, d_data, q_len ,d_len):
+        c_en_conv_in = c_reduce_in * 2 + 1
+        c_en_conv_out = config['c_en_conv_out']
+        self.encode = nn.Sequential(
+            nn.Conv2d(
+                c_en_conv_in, c_en_conv_out, config['k_en_conv'],
+                stride=config['s_en_conv'], padding=config['p_en_conv']),
+            nn.AdaptiveAvgPool2d(config['en_pool_out']),
+            nn.LeakyReLU(config['en_leaky']))
+
+    def forward(self, q_data, d_data, q_len ,d_len, d_pos):
         n_q = q_data.shape[1]
 
         # B x Q -> B x Q x E -> B x 1 x Q x E
@@ -70,4 +79,11 @@ class DeepRankNet(rank_module.RankNet):
             # M x 3 x Q x W
             input_tensor = torch.cat([qr_item, dr_item, inter_item], dim=1)
 
-        return input_tensor
+            # M x 4 x 1 x 1 -> M x 4 x 1
+            o = self.encode(input_tensor).squeeze(3)
+            # M x 1 x 1
+            pos = d_pos[i][:, None, None]
+            # M x 5
+            o = torch.cat([o, pos], dim=1)
+
+        return o
