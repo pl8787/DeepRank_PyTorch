@@ -33,6 +33,7 @@
 "en_pool_out": [1, 1],
 "en_leaky": 0.2,
 
+"dim_gru_hidden": 3,
 
 "data1_psize": 3,
 "data2_psize": 10,
