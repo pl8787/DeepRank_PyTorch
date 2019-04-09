@@ -105,7 +105,7 @@ class DeepRankNet(rank_module.RankNet):
             # M x 1
             pos = d_pos[i][:, None]
             # M x 5
-            o = torch.cat([o, pos], dim=1)
+            o = torch.cat([o, 1.0/(pos+1.0)], dim=1)
             # MaxQM x Q x 5
             o = self.group_match_by_q(o, d_len[i])
             # MaxQM x Q x 6 -> Q x 6 x MaxQM
