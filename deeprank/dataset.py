@@ -32,18 +32,25 @@ class DataLoader():
             filename=self.Letor07Path + '/docid_doc.txt')
         self.embed_dict = utils.read_embedding(
             filename=self.Letor07Path + '/embed_wiki-pdc_d50_norm')
+        self.idf_dict = utils.read_embedding(
+            filename=self.Letor07Path + '/embed.idf')
 
         self.feat_size = self.config['feat_size']
 
         self._PAD_ = len(self.word_dict)
-        self.embed_dict[self._PAD_] = np.zeros((50, ), dtype=np.float32)
         self.word_dict[self._PAD_] = '[PAD]'
         self.iword_dict['[PAD]'] = self._PAD_
+
+        self.embed_dict[self._PAD_] = np.zeros((50, ), dtype=np.float32)
         self.W_init_embed = np.float32(
             np.random.uniform(-0.02, 0.02, [len(self.word_dict), 50]))
         self.embedding = utils.convert_embed_2_numpy(
             self.embed_dict, embed = self.W_init_embed)
 
+        self.W_init_idf = np.float32(
+            np.zeros([len(self.word_dict), 1]))
+        self.idf_embedding = utils.convert_embed_2_numpy(
+            self.idf_dict, embed = self.W_init_idf)
 
 class PairGenerator():
     def __init__(self, rel_file, config):
