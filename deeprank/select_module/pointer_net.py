@@ -79,7 +79,7 @@ class PointerNet(select_module.SelectNet):
             torch.topk(prob_val, k=self.max_match, dim=1)
 
         d_snippet = []
-        d_snippet_len = [[self.max_match] for i in range(len(self.top_k_idx))]
+        d_snippet_len = [[self.max_match] * q_len[i] for i in range(len(self.top_k_idx))]
         for i in range(len(self.top_k_idx)):
             d_snippet.append(self.process_item(d_data[i], self.top_k_idx[i]))
         
