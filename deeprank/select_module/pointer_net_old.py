@@ -9,7 +9,7 @@ from deeprank import select_module
 
 
 class PointerNet(select_module.SelectNet):
-    def __init__(self, config, out_device=None):
+    def __init__(self, config):
         super().__init__(config)
         self.output_type = 'LL'
 
@@ -26,23 +26,10 @@ class PointerNet(select_module.SelectNet):
 
         self.embedding.weight.requires_grad = self.config['finetune_embed']
 
-        self.q_conv = nn.Conv2d(
-            1,
-            1,
-            kernel_size = [self.config['q_rep_kernel'], 1],
-            padding = [self.config['q_rep_kernel'] // 2, 0],
-            bias = False
+        self.d_avg_pool = nn.AvgPool1d(
+            kernel_size=self.win_size*2+1,
+            stride=self.win_size
         )
-
-        self.d_conv = nn.Conv2d(
-            1,
-            1,
-            kernel_size = [self.config['d_rep_kernel'], 1],
-            stride = [self.config['d_rep_kernel'] // 2, 1],
-            bias = False
-        )
-
-        self.out_device = out_device
 
     def get_win(self, d, p):
         start = p - self.win_size
@@ -62,45 +49,43 @@ class PointerNet(select_module.SelectNet):
         embed_q = self.embedding(q_data)
         embed_d = self.embedding(d_data)
 
-        # B x 1 x Q x E  &  B x 1 x D x E
-        embed_q_r = embed_q.unsqueeze(dim=1)
-        embed_d_r = embed_d.unsqueeze(dim=1)
-
-        # B x 1 x Q x E
-        vec_q = self.q_conv(embed_q_r)
-
-        # B x 1 x D/2 x E
-        vec_d = self.d_conv(embed_d_r)
-
-        # B x Q x E  &  B x D/2 x E
-        vec_q_r = vec_q.squeeze(dim=1)
-        vec_d_r = vec_d.squeeze(dim=1)
+        # B x D
+        mask_d = torch.arange(self.config['d_limit'])[None, :] < d_len[:, None]
+        # B x 1 x D
+        mask_d = mask_d.type(torch.float32).unsqueeze(1)
+        
+        # B x E x Q  &  B x E x D
+        embed_q_r = embed_q.permute(0, 2, 1)
+        embed_d_r = embed_d.permute(0, 2, 1)
 
         # B x E
-        vec_q_agg = torch.sum(vec_q_r, dim=1, keepdim=False) / q_len.unsqueeze(dim=1).type(torch.float32)
+        vec_q = torch.sum(embed_q_r, dim=2, keepdim=False) / q_len.unsqueeze(dim=1).type(torch.float32)
         
+        # B x E x D/2
+        vec_d_list = self.d_avg_pool(embed_d_r)
+        # B x 1 x D/2
+        mask_d_list = self.d_avg_pool(mask_d)
+
         # B x D/2
-        logit_val = torch.einsum('ix,ikx->ik', vec_q_agg, vec_d_r)
+        logit_val = torch.einsum('ix,ixk->ik', vec_q, vec_d_list)
+
+        #INF = -1e6
+        #logit_val = logit_val + (1.0 - mask_d_list.squeeze(1)) * INF
+        #print(logit_val[0])
 
         # B x K
         prob_val = F.softmax(logit_val, dim=1)
         self.top_k_val, self.top_k_idx = \
             torch.topk(prob_val, k=self.max_match, dim=1)
 
-        snippets = []
-        snippets_len = [[self.max_match] * q_len[i].item() for i in range(len(q_len))]
-        for i in range(len(q_len)):
-            snippets.append(self.process_item(d_data[i], self.top_k_idx[i]))
+        d_snippet = []
+        d_snippet_len = [[self.max_match] * q_len[i] for i in range(len(self.top_k_idx))]
+        for i in range(len(self.top_k_idx)):
+            d_snippet.append(self.process_item(d_data[i], self.top_k_idx[i]))
         
-        if self.out_device:
-            q_data = q_data.to(self.out_device)
-            snippets = [snippet.to(self.out_device) for snippet in snippets]
-
-        return q_data, snippets, q_len, snippets_len
+        return q_data, d_snippet, q_len, d_snippet_len
 
     def loss(self, reward):
-        reward = reward.to(self.top_k_val.device)
-
         # B
         sum_log_prob = -torch.log(self.top_k_val).sum(dim=1)
         # B/2
