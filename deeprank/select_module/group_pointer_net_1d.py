@@ -26,27 +26,27 @@ class GroupPointerNet(select_module.SelectNet):
 
         self.embedding.weight.requires_grad = self.config['finetune_embed']
 
-        self.q_conv = nn.Conv2d(
-            1,
-            1,
-            kernel_size = [self.config['q_rep_kernel'], 1],
-            padding = [self.config['q_rep_kernel'] // 2, 0],
+        self.q_conv = nn.Conv1d(
+            self.config['embed_dim'],
+            self.config['q_rep_dim'],
+            kernel_size = self.config['q_rep_kernel'],
+            padding = self.config['q_rep_kernel'] // 2,
             bias = False
         )
 
-        self.d_conv = nn.Conv2d(
-            1,
-            1,
-            kernel_size = [self.config['d_rep_kernel'], 1],
-            stride = [self.config['d_rep_kernel'] // 2, 1],
+        self.d_conv = nn.Conv1d(
+            self.config['embed_dim'],
+            self.config['d_rep_dim'],
+            kernel_size = self.config['d_rep_kernel'],
+            stride = self.config['d_rep_kernel'] // 2,
             bias = False
         )
 
         #torch.nn.init.constant_(self.q_conv.weight, 0.2)
         #torch.nn.init.constant_(self.d_conv.weight, 0.1)
 
-        #torch.nn.init.uniform_(self.q_conv.weight, a=0.0, b=0.5)
-        #torch.nn.init.uniform_(self.d_conv.weight, a=0.0, b=0.5)
+        torch.nn.init.uniform_(self.q_conv.weight, a=0.0, b=0.5)
+        torch.nn.init.uniform_(self.d_conv.weight, a=0.0, b=0.5)
 
         self.out_device = out_device
 
@@ -68,22 +68,18 @@ class GroupPointerNet(select_module.SelectNet):
         embed_q = self.embedding(q_data)
         embed_d = self.embedding(d_data)
 
-        # B x 1 x Q x E  &  B x 1 x D x E
-        embed_q_r = embed_q.unsqueeze(dim=1)
-        embed_d_r = embed_d.unsqueeze(dim=1)
+        # B x E x Q  &  B x E x D
+        embed_q_r = embed_q.permute(0, 2, 1)
+        embed_d_r = embed_d.permute(0, 2, 1)
 
-        # B x 1 x Q x E
+        # B x E' x Q
         vec_q = self.q_conv(embed_q_r)
 
-        # B x 1 x D/2 x E
+        # B x E' x D/2
         vec_d = self.d_conv(embed_d_r)
 
-        # B x Q x E  &  B x D/2 x E
-        vec_q_r = vec_q.squeeze(dim=1)
-        vec_d_r = vec_d.squeeze(dim=1)
-
         # B x Q x D/2
-        logit_val = torch.einsum('ijx,ikx->ijk', vec_q_r, vec_d_r)
+        logit_val = torch.einsum('ixj,ixk->ijk', vec_q, vec_d)
 
         # B x Q x K
         prob_val = F.softmax(logit_val, dim=2)
@@ -118,7 +114,7 @@ class GroupPointerNet(select_module.SelectNet):
     def loss(self, reward):
         reward = reward.to(self.positions_val[0].device)
 
-        log_sum_func = lambda x: (-torch.log(x)).sum(dim=0)
+        log_sum_func = lambda x: torch.log(x).sum(dim=0)
         # B
         sum_log_prob = torch.stack(list(map(log_sum_func, self.positions_val)), dim=0)
         # B/2
